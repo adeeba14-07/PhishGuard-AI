@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - PhishGuard AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .container { max-width: 800px; margin: 100px auto 2rem; padding: 2rem; }
+        h1 { color: white; margin-bottom: 2rem; text-align: center; }
+        .settings-card { background: white; padding: 1.5rem; border-radius: 20px; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e2e8f0; }
+        .toggle { width: 50px; height: 26px; background: #cbd5e1; border-radius: 13px; position: relative; cursor: pointer; transition: 0.3s; }
+        .toggle.active { background: #6366f1; }
+        .toggle:after { content: ''; position: absolute; width: 22px; height: 22px; background: white; border-radius: 50%; top: 2px; left: 3px; transition: 0.3s; }
+        .toggle.active:after { left: 25px; }
+        select { padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1; }
+        .save-btn { width: 100%; padding: 1rem; background: #6366f1; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+        .danger-btn { width: 100%; padding: 1rem; background: #ef4444; color: white; border: none; border-radius: 12px; cursor: pointer; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="logo-text">PhishGuard <span class="badge">AI</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/reports">Reports</a>
+                <a href="/settings">Settings</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>⚙️ Settings</h1>
+
+        <div class="settings-card">
+            <h3>🌙 Appearance</h3>
+            <div class="setting-item">
+                <span>Dark Mode</span>
+                <div class="toggle" id="darkToggle" onclick="toggleDarkMode()"></div>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h3>📊 Data Settings</h3>
+            <div class="setting-item">
+                <span>Max History Items</span>
+                <select id="maxHistory">
+                    <option value="10">10 items</option>
+                    <option value="20" selected>20 items</option>
+                    <option value="50">50 items</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h3>🗑️ Danger Zone</h3>
+            <button class="danger-btn" onclick="clearAllData()">Delete All History</button>
+        </div>
+
+        <button class="save-btn" onclick="saveSettings()">💾 Save Settings</button>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 PhishGuard AI | Machine Learning Powered Security</p>
+    </footer>
+
+    <script>
+        function loadSettings() {
+            const darkMode = localStorage.getItem('theme') === 'dark';
+            if (darkMode) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkToggle').classList.add('active');
+            }
+            const maxHistory = localStorage.getItem('maxHistory') || '20';
+            document.getElementById('maxHistory').value = maxHistory;
+        }
+        
+        function toggleDarkMode() {
+            const el = document.getElementById('darkToggle');
+            el.classList.toggle('active');
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        }
+        
+        function saveSettings() {
+            localStorage.setItem('maxHistory', document.getElementById('maxHistory').value);
+            alert('✅ Settings saved!');
+        }
+        
+        function clearAllData() {
+            if (confirm('Delete all history? This cannot be undone.')) {
+                localStorage.removeItem('phishguard_history');
+                alert('All data cleared!');
+            }
+        }
+        
+        loadSettings();
+    </script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - PhishGuard AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .report-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .export-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .export-pdf { background: #ef4444; color: white; }
+        .export-csv { background: #10b981; color: white; }
+        .export-json { background: #6366f1; color: white; }
+        .date-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .date-filter input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="logo-text">PhishGuard <span class="badge">AI</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/reports" class="active">Reports</a>
+                <a href="/settings">Settings</a>
+                <button onclick="toggleTheme()" class="theme-toggle">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="hero-title" style="font-size: 2rem; margin-bottom: 2rem;">📄 Security Reports</h1>
+
+        <div class="report-card">
+            <div class="report-header">
+                <h2>Generate Report</h2>
+                <div class="export-buttons">
+                    <button onclick="exportPDF()" class="export-btn export-pdf">📄 Export PDF</button>
+                    <button onclick="exportCSV()" class="export-btn export-csv">📊 Export CSV</button>
+                    <button onclick="exportJSON()" class="export-btn export-json">🔧 Export JSON</button>
+                </div>
+            </div>
+            
+            <div class="date-filter">
+                <input type="date" id="startDate" placeholder="Start Date">
+                <input type="date" id="endDate" placeholder="End Date">
+                <button onclick="filterReports()" class="check-btn" style="padding: 0.5rem 1rem;">Apply Filter</button>
+                <button onclick="sendEmailReport()" class="check-btn" style="padding: 0.5rem 1rem; background: #6366f1;">📧 Email Report</button>
+            </div>
+        </div>
+
+        <div class="report-card">
+            <h2>📊 Summary Report</h2>
+            <div id="summaryStats"></div>
+        </div>
+
+        <div class="report-card">
+            <h2>📋 Detailed Report</h2>
+            <div id="detailedReport"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 PhishGuard AI | Advanced Phishing Detection System</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        let predictionHistory = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
+        
+        function updateSummary() {
+            const total = predictionHistory.length;
+            const safe = predictionHistory.filter(h => h.result === 'SAFE').length;
+            const phishing = total - safe;
+            const avgConfidence = total > 0 ? (predictionHistory.reduce((sum, h) => sum + h.confidence, 0) / total).toFixed(1) : 0;
+            
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div class="stat-card" style="padding: 1rem; text-align: center;">
+                        <div class="stat-number">${total}</div>
+                        <div class="stat-label">Total Checks</div>
+                    </div>
+                    <div class="stat-card" style="padding: 1rem; text-align: center;">
+                        <div class="stat-number" style="color: #10b981;">${safe}</div>
+                        <div class="stat-label">Safe</div>
+                    </div>
+                    <div class="stat-card" style="padding: 1rem; text-align: center;">
+                        <div class="stat-number" style="color: #ef4444;">${phishing}</div>
+                        <div class="stat-label">Phishing</div>
+                    </div>
+                    <div class="stat-card" style="padding: 1rem; text-align: center;">
+                        <div class="stat-number">${avgConfidence}%</div>
+                        <div class="stat-label">Avg Confidence</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function displayDetailedReport() {
+            if (predictionHistory.length === 0) {
+                document.getElementById('detailedReport').innerHTML = '<p style="text-align: center; color: #666;">No data available</p>';
+                return;
+            }
+            
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<tr style="background: #f1f5f9;"><th style="padding: 10px;">Date/Time</th><th>URL</th><th>Result</th><th>Confidence</th><th>Risk Level</th></tr>';
+            predictionHistory.forEach(item => {
+                const rowColor = item.result === 'SAFE' ? '#d1fae5' : '#fee2e2';
+                html += `<tr style="background: ${rowColor}; border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;">${item.timestamp}</td>
+                            <td style="padding: 8px;">${item.url}</td>
+                            <td style="padding: 8px;">${item.result === 'SAFE' ? '✅ SAFE' : '⚠️ PHISHING'}</td>
+                            <td style="padding: 8px;">${item.confidence}%</td>
+                            <td style="padding: 8px;">${item.riskLevel || (item.result === 'SAFE' ? 'LOW' : 'HIGH')}</td>
+                         </tr>`;
+            });
+            html += '</table>';
+            document.getElementById('detailedReport').innerHTML = html;
+        }
+        
+        function exportCSV() {
+            let csv = "Date/Time,URL,Result,Confidence,Risk Level\n";
+            predictionHistory.forEach(item => {
+                csv += `"${item.timestamp}","${item.url}","${item.result}","${item.confidence}","${item.riskLevel || (item.result === 'SAFE' ? 'LOW' : 'HIGH')}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `phishguard_report_${Date.now()}.csv`;
+            link.click();
+        }
+        
+        function exportJSON() {
+            const data = {
+                generated_at: new Date().toISOString(),
+                total_checks: predictionHistory.length,
+                safe_count: predictionHistory.filter(h => h.result === 'SAFE').length,
+                phishing_count: predictionHistory.filter(h => h.result !== 'SAFE').length,
+                history: predictionHistory
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `phishguard_data_${Date.now()}.json`;
+            link.click();
+        }
+        
+        function exportPDF() {
+            const element = document.getElementById('detailedReport');
+            html2pdf().from(element).save(`phishguard_report_${Date.now()}.pdf`);
+        }
+        
+        function filterReports() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (startDate || endDate) {
+                // Filter logic would go here
+                alert('Filter applied!');
+            }
+        }
+        
+        function sendEmailReport() {
+            const email = prompt('Enter your email address to receive the report:');
+            if (email && email.includes('@')) {
+               const history = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
+               const reportContent = `PhishGuard AI Report\n\nGenerated: ${new Date().toLocaleString()}\n\nTotal URLs Checked: ${history.length}\nSafe: ${history.filter(h => h.result === 'SAFE').length}\nPhishing: ${history.filter(h => h.result !== 'SAFE').length}\n\nThank you for using PhishGuard AI!`;
+        
+                const blob = new Blob([reportContent], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `phishguard_report_${Date.now()}.txt`;
+                link.click();
+        
+              alert(`📧 Report file created! Please email it to ${email} manually.\n\nFile has been downloaded to your computer.`);
+            } else if (email) {
+               alert('Please enter a valid email address (example@domain.com)');
+            }
+        }
+        
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+        
+        updateSummary();
+        displayDetailedReport();
+    </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PhishGuard AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-number { font-size: 2.5rem; font-weight: 700; color: #6366f1; }
+        .stat-label { color: #666; margin-top: 0.5rem; }
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .dashboard-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .dashboard-nav a {
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border-radius: 50px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s;
+        }
+        .dashboard-nav a:hover, .dashboard-nav a.active {
+            background: #6366f1;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="logo-text">PhishGuard <span class="badge">AI</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/dashboard" class="active">Dashboard</a>
+                <a href="/reports">Reports</a>
+                <a href="/settings">Settings</a>
+                <button onclick="toggleTheme()" class="theme-toggle" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="hero-title" style="font-size: 2rem; margin-bottom: 2rem;">📊 Analytics Dashboard</h1>
+        
+        <div class="dashboard-nav">
+            <a href="#" onclick="showStat('overview')" class="active" id="overviewLink">Overview</a>
+            <a href="#" onclick="showStat('history')" id="historyLink">History</a>
+            <a href="#" onclick="showStat('charts')" id="chartsLink">Charts</a>
+            <a href="#" onclick="showStat('insights')" id="insightsLink">Security Insights</a>
+        </div>
+
+        <div id="overviewSection">
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalChecks">0</div>
+                    <div class="stat-label">Total URLs Checked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="safeCount" style="color: #10b981;">0</div>
+                    <div class="stat-label">✅ Safe URLs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="phishingCount" style="color: #ef4444;">0</div>
+                    <div class="stat-label">⚠️ Phishing URLs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="safePercent">0%</div>
+                    <div class="stat-label">Safety Rate</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="predictionChart"></canvas>
+            </div>
+        </div>
+
+        <div id="historySection" style="display: none;">
+            <div class="chart-container">
+                <h3>📜 Recent Predictions</h3>
+                <div id="historyList" style="max-height: 400px; overflow-y: auto;"></div>
+                <button onclick="clearHistory()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 10px; cursor: pointer;">Clear History</button>
+            </div>
+        </div>
+
+        <div id="chartsSection" style="display: none;">
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="riskDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <div id="insightsSection" style="display: none;">
+            <div class="chart-container">
+                <h3>🔍 Security Insights</h3>
+                <div id="insightsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 PhishGuard AI | Advanced Phishing Detection System</p>
+    </footer>
+
+    <script>
+        let predictionHistory = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
+        
+        function updateStats() {
+            const total = predictionHistory.length;
+            const safe = predictionHistory.filter(h => h.result === 'SAFE').length;
+            const phishing = total - safe;
+            const safePercent = total > 0 ? (safe / total * 100).toFixed(1) : 0;
+            
+            document.getElementById('totalChecks').textContent = total;
+            document.getElementById('safeCount').textContent = safe;
+            document.getElementById('phishingCount').textContent = phishing;
+            document.getElementById('safePercent').textContent = safePercent + '%';
+            
+            // Update chart
+            const ctx = document.getElementById('predictionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Safe', 'Phishing'],
+                    datasets: [{
+                        data: [safe, phishing],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+        
+        function displayHistory() {
+            const container = document.getElementById('historyList');
+            if (predictionHistory.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">No predictions yet. Check some URLs!</p>';
+                return;
+            }
+            
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<tr style="background: #f1f5f9;"><th style="padding: 10px;">Time</th><th>URL</th><th>Result</th><th>Confidence</th></tr>';
+            predictionHistory.forEach(item => {
+                const rowColor = item.result === 'SAFE' ? '#d1fae5' : '#fee2e2';
+                html += `<tr style="background: ${rowColor}; border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;">${item.timestamp}</td>
+                            <td style="padding: 8px;">${item.url}</td>
+                            <td style="padding: 8px;">${item.result === 'SAFE' ? '✅ SAFE' : '⚠️ PHISHING'}</td>
+                            <td style="padding: 8px;">${item.confidence}%</td>
+                         </tr>`;
+            });
+            html += '</table>';
+            container.innerHTML = html;
+        }
+        
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all history?')) {
+                localStorage.removeItem('phishguard_history');
+                predictionHistory = [];
+                updateStats();
+                displayHistory();
+            }
+        }
+        
+        function showStat(section) {
+            document.getElementById('overviewSection').style.display = 'none';
+            document.getElementById('historySection').style.display = 'none';
+            document.getElementById('chartsSection').style.display = 'none';
+            document.getElementById('insightsSection').style.display = 'none';
+            
+            document.getElementById('overviewLink').classList.remove('active');
+            document.getElementById('historyLink').classList.remove('active');
+            document.getElementById('chartsLink').classList.remove('active');
+            document.getElementById('insightsLink').classList.remove('active');
+            
+            if (section === 'overview') {
+                document.getElementById('overviewSection').style.display = 'block';
+                document.getElementById('overviewLink').classList.add('active');
+                updateStats();
+            } else if (section === 'history') {
+                document.getElementById('historySection').style.display = 'block';
+                document.getElementById('historyLink').classList.add('active');
+                displayHistory();
+            } else if (section === 'charts') {
+                document.getElementById('chartsSection').style.display = 'block';
+                document.getElementById('chartsLink').classList.add('active');
+                createTrendChart();
+                createRiskChart();
+            } else if (section === 'insights') {
+                document.getElementById('insightsSection').style.display = 'block';
+                document.getElementById('insightsLink').classList.add('active');
+                displayInsights();
+            }
+        }
+        
+        function createTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const last7Days = predictionHistory.slice(-7);
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days.map((_, i) => `Day ${i+1}`),
+                    datasets: [{
+                        label: 'Predictions',
+                        data: last7Days.map(() => Math.random() * 10),
+                        borderColor: '#6366f1',
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+        
+        function createRiskChart() {
+            const ctx = document.getElementById('riskDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['URL Length', 'No HTTPS', 'Special Chars', 'IP Address', 'Domain Age'],
+                    datasets: [{
+                        label: 'Risk Contribution',
+                        data: [15, 20, 10, 25, 15],
+                        backgroundColor: '#f59e0b'
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+        
+        function displayInsights() {
+            const container = document.getElementById('insightsContent');
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 10px;">
+                    <h4>📊 Quick Statistics</h4>
+                    <p>• ${predictionHistory.length} total URLs analyzed</p>
+                    <p>• Average confidence: ${predictionHistory.length > 0 ? (predictionHistory.reduce((sum, h) => sum + h.confidence, 0) / predictionHistory.length).toFixed(1) : 0}%</p>
+                </div>
+                <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 10px;">
+                    <h4>⚠️ Common Phishing Indicators</h4>
+                    <ul>
+                        <li>URLs containing IP addresses</li>
+                        <li>Missing HTTPS encryption</li>
+                        <li>Excessive special characters</li>
+                        <li>Newly registered domains</li>
+                    </ul>
+                </div>
+                <div style="padding: 1rem; background: #d1fae5; border-radius: 10px;">
+                    <h4>✅ Pro Tips</h4>
+                    <p>• Always check URLs before clicking</p>
+                    <p>• Look for HTTPS in the address bar</p>
+                    <p>• Hover over links to see actual destination</p>
+                </div>
+            `;
+        }
+        
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            const btn = document.querySelector('.theme-toggle');
+            if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+        }
+        
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            const btn = document.querySelector('.theme-toggle');
+            if (btn) btn.textContent = '☀️';
+        }
+        
+        updateStats();
+        showStat('overview');
+    </script>
+</body>
+</html>

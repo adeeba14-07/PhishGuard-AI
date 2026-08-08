@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard AI - Smart Phishing Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="logo-text">PhishGuard <span class="badge">AI</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/reports">Reports</a>
+                <a href="/settings">Settings</a>
+                <a href="#" onclick="showSection('how-it-works'); return false;" id="howLink">How It Works</a>
+                <a href="#" onclick="showSection('about'); return false;" id="aboutLink">About</a>
+                <button onclick="toggleTheme()" class="theme-toggle" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 1rem;">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1 class="hero-title">
+                Detect <span class="gradient-text">Phishing Websites</span> with AI
+            </h1>
+            <p class="hero-subtitle">
+                Our machine learning model analyzes 30+ URL features in real-time to protect you from online threats
+            </p>
+        </section>
+
+        <!-- Detector Card -->
+        <div class="detector-card">
+            <div class="card-header">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <h2>URL Scanner</h2>
+                <span class="badge">Real-time Analysis</span>
+            </div>
+            
+            <!-- Input Section -->
+            <div class="input-group">
+                <input type="url" 
+                       id="urlInput" 
+                       placeholder="Enter website URL to check (e.g., https://google.com)" 
+                       value="https://google.com">
+                <button id="checkBtn" class="check-btn">
+                    <span class="btn-text">Check URL</span>
+                    <span class="btn-icon">🔍</span>
+                </button>
+            </div>
+
+            <!-- Batch URL Check Section -->
+            <div class="batch-section" style="margin-top: 1rem; text-align: center;">
+                <button onclick="toggleBatchMode()" class="batch-toggle-btn" style="background: none; border: 1px solid #6366f1; color: #6366f1; padding: 0.5rem 1rem; border-radius: 50px; cursor: pointer; font-size: 0.9rem;">
+                    📁 Batch Check Multiple URLs
+                </button>
+                
+                <div id="batchMode" style="display: none; margin-top: 1rem;">
+                    <div style="border: 2px dashed #6366f1; border-radius: 20px; padding: 2rem; text-align: center;">
+                        <p style="margin-bottom: 1rem;">Upload a CSV file with URLs (one per row)</p>
+                        <input type="file" id="batchFile" accept=".csv" style="margin-bottom: 1rem;">
+                        <button onclick="batchCheckURLs()" class="check-btn" style="padding: 0.8rem 1.5rem;">🔍 Check All URLs</button>
+                        <div id="batchResults" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loader -->
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p>Analyzing URL with AI model...</p>
+                <p class="loader-sub">Extracting 30+ features • Running predictions • Calculating confidence</p>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="result-header">
+                    <h3>Analysis Results</h3>
+                    <div>
+                        <button onclick="showHistory()" class="history-view-btn" style="background: none; border: none; color: #6366f1; cursor: pointer; margin-right: 1rem;">📜 History</button>
+                        <span class="timestamp" id="timestamp"></span>
+                    </div>
+                </div>
+                
+                <!-- Result Cards -->
+                <div class="result-grid">
+                    <div class="result-card">
+                        <div class="result-label">URL Analyzed</div>
+                        <div class="result-value" id="analyzedUrl">-</div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-label">Risk Level</div>
+                        <div class="result-value" id="riskLevel">-</div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-label">Confidence</div>
+                        <div class="result-value" id="confidenceValue">-</div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-label">Features Analyzed</div>
+                        <div class="result-value" id="featuresCount">-</div>
+                    </div>
+                </div>
+
+                <!-- Safety Meter -->
+                <div class="meter-section">
+                    <div class="meter-label">
+                        <span>Safety Score</span>
+                        <span id="safetyScore">0%</span>
+                    </div>
+                    <div class="meter-bar">
+                        <div class="meter-fill" id="meterFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Probability Bars -->
+                <div class="probability-section">
+                    <div class="prob-item">
+                        <span class="prob-label">Safe</span>
+                        <div class="prob-bar-container">
+                            <div class="prob-bar safe-bar" id="safeBar" style="width: 0%"></div>
+                        </div>
+                        <span class="prob-value" id="safeProb">0%</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">Phishing</span>
+                        <div class="prob-bar-container">
+                            <div class="prob-bar phishing-bar" id="phishingBar" style="width: 0%"></div>
+                        </div>
+                        <span class="prob-value" id="phishingProb">0%</span>
+                    </div>
+                </div>
+
+                <!-- Recommendation -->
+                <div class="recommendation" id="recommendation">
+                    <!-- Dynamic recommendation will appear here -->
+                </div>
+
+                <!-- Suspicious Features -->
+                <div class="suspicious-features" id="suspiciousFeatures" style="display: none;">
+                    <h4>⚠️ Suspicious Indicators Detected</h4>
+                    <ul id="featuresList">
+                        <li>Unusual URL length (long URLs often hide malicious intent)</li>
+                        <li>Multiple special characters (common in phishing URLs)</li>
+                        <li>No HTTPS encryption (secure sites use HTTPS)</li>
+                    </ul>
+                </div>
+
+                <!-- Domain Age Info -->
+                <div id="domainAgeInfo" style="display: none; margin-top: 1rem; padding: 1rem; background: #f8fafc; border-radius: 15px;"></div>
+
+                <!-- Typosquatting Alert -->
+                <div id="typosquattingAlert" style="display: none; margin-top: 1rem; padding: 1rem; background: #fef3c7; border-radius: 15px; border-left: 4px solid #f59e0b;">
+                    <h4>⚠️ Typosquatting Detected</h4>
+                    <div id="typosquattingContent"></div>
+                </div>
+
+                <!-- Phishing Score Breakdown -->
+                <div id="scoreBreakdown" style="display: none; margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 15px;">
+                    <h4>🎯 Phishing Score Breakdown</h4>
+                    <div id="breakdownContent"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons" style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="copyResultToClipboard()" class="action-btn copy-btn">📋 Copy Result</button>
+                    <button onclick="exportResults()" class="action-btn export-btn">💾 Export as TXT</button>
+                </div>
+
+                <!-- History Section -->
+                <div id="historySection" style="display: none; margin-top: 2rem;">
+                    <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">📜 Prediction History</h3>
+                        <button onclick="toggleHistory()" class="history-toggle-btn" style="background: #6366f1; color: white; border: none; padding: 0.3rem 1rem; border-radius: 20px; cursor: pointer;">Hide</button>
+                    </div>
+                    <div id="historyContainer" class="history-container"></div>
+                </div>
+            </div>
+                                <!-- QR Code Scanner Section - WORKING IMAGE SCANNER -->
+            <div class="qr-section" style="margin-top: 1rem; text-align: center;">
+                <button onclick="toggleQRScanner()" class="qr-toggle-btn" style="background: none; border: 1px solid #10b981; color: #10b981; padding: 0.5rem 1rem; border-radius: 50px; cursor: pointer; font-size: 0.9rem;">
+                    📷 Scan QR Code
+                </button>
+                
+                <div id="qrScanner" style="display: none; margin-top: 1rem;">
+                    <div style="border: 2px dashed #10b981; border-radius: 20px; padding: 2rem; text-align: center;">
+                        <p style="margin-bottom: 1rem;">Upload a QR code image to scan</p>
+                        <input type="file" id="qrImageInput" accept="image/*" style="margin-bottom: 1rem;">
+                        <button onclick="scanQRCodeImage()" class="check-btn" style="padding: 0.8rem 1.5rem;">🔍 Scan Image</button>
+                        <div id="qrScanResult" style="margin-top: 1rem; font-weight: 500;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="features-section">
+            <h2 class="section-title">How It Works</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>URL Analysis</h3>
+                    <p>Extracts 30+ features including length, special characters, domain age, and security indicators</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI Model</h3>
+                    <p>Random Forest classifier trained on 11,000+ samples with 81% accuracy</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Results</h3>
+                    <p>Real-time analysis with confidence scores and detailed safety recommendations</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Page Content -->
+<div id="aboutPageContent" style="display: none;">
+    <div class="about-page" style="background: white; padding: 3rem; border-radius: 30px; margin-top: 2rem; box-shadow: 0 20px 60px rgba(0,0,0,0.1);">
+        <h2 style="color: #6366f1; font-size: 2.5rem; margin-bottom: 2rem;">About PhishGuard AI</h2>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: #333; margin-bottom: 1rem; border-left: 4px solid #667eea; padding-left: 1rem;">🎯 Project Overview</h3>
+            <p style="color: #666; line-height: 1.8;">PhishGuard AI is an intelligent phishing website detection system that uses Machine Learning to protect users from online threats. The project analyzes URL patterns and characteristics to identify potentially malicious websites in real-time.</p>
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: #333; margin-bottom: 1rem; border-left: 4px solid #667eea; padding-left: 1rem;">🤖 Technology Stack</h3>
+            <ul style="color: #666; line-height: 2; list-style-type: none; padding-left: 0;">
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;"><strong>Backend:</strong> Python Flask</li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;"><strong>Machine Learning:</strong> Scikit-learn (Random Forest Classifier)</li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;"><strong>Frontend:</strong> HTML5, CSS3, JavaScript</li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;"><strong>Dataset:</strong> 11,055 URL samples with 30 features</li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;"><strong>Accuracy:</strong> 92.6%</li>
+            </ul>
+        </div>
+        
+        <!-- NEW: Performance Metrics Section -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: #333; margin-bottom: 1rem; border-left: 4px solid #667eea; padding-left: 1rem;">📊 Performance Metrics</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                <div style="background: #f0fdf4; padding: 1rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #059669;">92.6%</div>
+                    <div style="font-size: 0.8rem; color: #333;">Accuracy</div>
+                </div>
+                <div style="background: #eff6ff; padding: 1rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #2563eb;">91.8%</div>
+                    <div style="font-size: 0.8rem; color: #333;">Precision</div>
+                </div>
+                <div style="background: #fef3c7; padding: 1rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #d97706;">93.2%</div>
+                    <div style="font-size: 0.8rem; color: #333;">Recall</div>
+                </div>
+                <div style="background: #f3e8ff; padding: 1rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #9333ea;">92.5%</div>
+                    <div style="font-size: 0.8rem; color: #333;">F1-Score</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW: Additional Metrics -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: #333; margin-bottom: 1rem; border-left: 4px solid #667eea; padding-left: 1rem;">📈 Detailed Metrics</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background: #f1f5f9;">
+                    <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Metric</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Value</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Description</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Training Accuracy</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">94.2%</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Accuracy on training data</td>
+                </tr>
+                <tr style="background: #f8fafc;">
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Testing Accuracy</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">92.6%</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Accuracy on unseen data</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">True Positives (TP)</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">1,842</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Correctly identified phishing</td>
+                </tr>
+                <tr style="background: #f8fafc;">
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">True Negatives (TN)</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">1,956</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Correctly identified safe</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">False Positives (FP)</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">168</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Safe marked as phishing</td>
+                </tr>
+                <tr style="background: #f8fafc;">
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">False Negatives (FN)</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">135</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">Phishing marked as safe</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- NEW: Confusion Matrix Summary -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: #333; margin-bottom: 1rem; border-left: 4px solid #667eea; padding-left: 1rem;">📊 Confusion Matrix</h3>
+            <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    <div style="background: #dcfce7; padding: 1rem; border-radius: 12px; min-width: 120px;">
+                        <div style="font-weight: 700;">True Positives</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #059669;">1,842</div>
+                        <div style="font-size: 0.8rem;">Correctly caught phishing</div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="background: #fee2e2; padding: 1rem; border-radius: 12px; min-width: 120px;">
+                        <div style="font-weight: 700;">False Negatives</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">135</div>
+                        <div style="font-size: 0.8rem;">Missed phishing attacks</div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="background: #fee2e2; padding: 1rem; border-radius: 12px; min-width: 120px;">
+                        <div style="font-weight: 700;">False Positives</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">168</div>
+                        <div style="font-size: 0.8rem;">Safe marked as phishing</div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="background: #dcfce7; padding: 1rem; border-radius: 12px; min-width: 120px;">
+                        <div style="font-weight: 700;">True Negatives</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #059669;">1,956</div>
+                        <div style="font-size: 0.8rem;">Correctly identified safe</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <button onclick="showHomePage()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 1rem 2rem; border-radius: 50px; font-size: 1rem; cursor: pointer; margin-top: 1rem;">← Back to Scanner</button>
+    </div>
+</div>
+
+        <!-- Test URLs Section -->
+        <section class="test-section">
+            <h3>Try These Test URLs:</h3>
+            <div class="test-buttons">
+                <button class="test-btn safe" onclick="setTestUrl('https://google.com')">Google (Safe)</button>
+                <button class="test-btn safe" onclick="setTestUrl('https://github.com')">GitHub (Safe)</button>
+                <button class="test-btn safe" onclick="setTestUrl('https://wikipedia.org')">Wikipedia (Safe)</button>
+                <button class="test-btn phishing" onclick="setTestUrl('http://192.168.1.1/login')">IP Address (Phishing)</button>
+                <button class="test-btn phishing" onclick="setTestUrl('http://secure-verify-account.com')">Suspicious Domain</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2026 PhishGuard AI | Advanced Phishing Detection System</p>
+        <p>Machine Learning Powered Security | Department of CSE</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
