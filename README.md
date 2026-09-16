@@ -1,3 +1,7 @@
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Flask](https://img.shields.io/badge/Flask-2.3.3-green)
+![Deployed on Render](https://img.shields.io/badge/Deployed%20on-Render-purple)
+
 # 🛡️ PhishGuard AI
 
 An advanced **Machine Learning-based Phishing URL Detector** built with Python, Flask, and Scikit-learn. Analyze URLs instantly to detect phishing attempts before you click.
