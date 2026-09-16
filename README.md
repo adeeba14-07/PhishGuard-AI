@@ -59,6 +59,19 @@ python app.py
 
     Check the dashboard to view the risk analysis and confidence score!
 
+## Deployment
+
+This project is deployed on Render :
+ Click : https://phishguard-ai-nkte.onrender.com
+
+Build Command: pip install -r requirements.txt
+
+Start Command: gunicorn app:app
+
+Environment Variable: PYTHON_VERSION=3.11.9
+
+Runtime: Python 3
+
 ## 📂 Project Structure
 ```text
 PhishGuard-AI/
